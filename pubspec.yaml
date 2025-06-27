@@ -28,29 +28,30 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
- flutter:
-  sdk: flutter
+  flutter:
+    sdk: flutter
 
-# For Icons
-cupertino_icons: ^1.0.2
+  # For Icons
+  cupertino_icons: ^1.0.2
 
-# For graphing/charting
-fl_chart: ^0.68.0
+  # NEW MAP PACKAGES
+  flutter_map: ^8.1.1       # The new map package
+  latlong2: ^0.9.1          # Helper for latitude/longitude points
 
-# For map integration
-Maps_flutter: ^2.6.0
-
-# For picking files (CSV)
-file_picker: ^8.0.5
-
-# For handling CSV data
-csv: ^6.0.0
-
-# For state management (optional but highly recommended)
-provider: ^6.1.2
-
-# For easy directory path finding
-path_provider: ^2.1.3
+  # For graphing/charting
+  fl_chart: ^0.68.0
+  
+  # For picking files (CSV)
+  file_picker: ^8.0.5
+  
+  # For handling CSV data
+  csv: ^6.0.0
+  
+  # For state management (optional but highly recommended)
+  provider: ^6.1.2
+  
+  # For easy directory path finding
+  path_provider: ^2.1.3
 
 
 dev_dependencies:
