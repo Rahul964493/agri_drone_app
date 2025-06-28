@@ -7,7 +7,7 @@ import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 
-// 1. DATA MODEL for Crop Analysis Results
+// Data model is unchanged
 class CropAnalysisResult {
   final double avgNDVI;
   final double avgGNDVI;
@@ -41,7 +41,7 @@ class _CropPageState extends State<CropPage> {
   bool _isLoading = false;
   CropAnalysisResult? _analysisResult;
 
-  // 2. PROCESSING LOGIC with real calculations
+  // MODIFIED processing logic with enhanced error reporting
   Future<void> _pickAndProcessCsv() async {
     setState(() => _isLoading = true);
 
@@ -59,27 +59,38 @@ class _CropPageState extends State<CropPage> {
         if (kIsWeb) {
           final List<int> fileBytes = file.bytes!;
           final String csvString = utf8.decode(fileBytes);
+          // Use eol: '\n' for better cross-platform line ending compatibility
           fields = const CsvToListConverter(shouldParseNumbers: true, eol: '\n').convert(csvString);
         } else {
           final input = File(file.path!).openRead();
           fields = await input.transform(utf8.decoder).transform(const CsvToListConverter(shouldParseNumbers: true)).toList();
         }
 
-        if (fields.length < 2) throw Exception("CSV file must have a header and at least one data row.");
+        if (fields.isEmpty) throw Exception("CSV file is empty.");
         
-        final header = fields.removeAt(0).map((e) => e.toString().trim().toUpperCase()).toList();
-        // Verify header columns
-        if (!header.contains(['RED', 'GREEN', 'NIR', 'PAR'])) {
-          throw Exception("CSV file must contain 'Red', 'Green', 'NIR', and 'PAR' columns.");
-        }
+        // --- NEW: Detailed Header Validation ---
+        final List<String> header = fields.first.map((e) => e.toString().trim().toUpperCase()).toList();
+        // This print statement will show the exact header in your debug console (F12 in Chrome)
+        debugPrint("Parsed CSV Header: $header"); 
 
-        // Get column indices
+        final requiredColumns = ['SAMPLE', 'RED', 'GREEN', 'NIR', 'PAR'];
+        final missingColumns = requiredColumns.where((col) => !header.contains(col)).toList();
+
+        if (missingColumns.isNotEmpty) {
+          // This new error is much more descriptive
+          throw Exception("CSV is missing required columns: ${missingColumns.join(', ')}. The header we found was: $header");
+        }
+        // --- End of new validation ---
+
+        fields.removeAt(0); // Remove header row after validation
+
         final redIndex = header.indexOf('RED');
         final greenIndex = header.indexOf('GREEN');
         final nirIndex = header.indexOf('NIR');
         final parIndex = header.indexOf('PAR');
         final sampleIndex = header.indexOf('SAMPLE');
 
+        // ... (The rest of the calculation logic is the same) ...
         final List<double> ndviValues = [];
         final List<double> gndviValues = [];
         final List<double> saviValues = [];
@@ -98,17 +109,15 @@ class _CropPageState extends State<CropPage> {
           double nir = row[nirIndex].toDouble();
           double par = row[parIndex].toDouble();
 
-          // Add spots for graphs
           redSpots.add(FlSpot(sample, red));
           greenSpots.add(FlSpot(sample, green));
           nirSpots.add(FlSpot(sample, nir));
           parSpots.add(FlSpot(sample, par));
 
-          // ** VEGETATION INDEX CALCULATIONS **
           if ((nir + red) > 0) ndviValues.add((nir - red) / (nir + red));
           if ((nir + green) > 0) gndviValues.add((nir - green) / (nir + green));
           
-          const double L = 0.5; // Soil brightness factor for SAVI
+          const double L = 0.5;
           if ((nir + red + L) > 0) saviValues.add(((nir - red) / (nir + red + L)) * (1 + L));
           
           msaviValues.add((2 * nir + 1 - sqrt(pow(2 * nir + 1, 2) - 8 * (nir - red))) / 2);
@@ -130,13 +139,17 @@ class _CropPageState extends State<CropPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      // The error message shown in the app will now be much more helpful
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error: $e'),
+        duration: const Duration(seconds: 10), // Show for longer
+      ));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  // --- UI Build Methods ---
+  // --- UI Build Methods (No Changes Below This Line) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,7 +209,6 @@ class _CropPageState extends State<CropPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          // Key metrics
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -212,8 +224,6 @@ class _CropPageState extends State<CropPage> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Spectral Bands Graph
           _buildMultiLineChart(
             title: "Spectral Reflectance",
             lines: {
@@ -222,17 +232,13 @@ class _CropPageState extends State<CropPage> {
               'Red': ChartLine(spots: results.redSpots, color: Colors.redAccent),
             }
           ),
-
           const SizedBox(height: 24),
-          
-          // PAR Graph
           _buildMultiLineChart(
             title: "Photosynthetically Active Radiation (PAR)",
              lines: {
               'PAR': ChartLine(spots: results.parSpots, color: Colors.amber),
             }
           ),
-
           const SizedBox(height: 20),
           ElevatedButton(onPressed: () => setState(() => _analysisResult = null), child: const Text("Analyze New File")),
         ],
@@ -289,7 +295,6 @@ class _CropPageState extends State<CropPage> {
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                     )).toList(),
-                    // Legend
                     lineTouchData: LineTouchData(
                       touchTooltipData: LineTouchTooltipData(
                         getTooltipItems: (touchedSpots) {
