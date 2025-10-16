@@ -322,7 +322,7 @@ class _SoilPageState extends State<SoilPage> {
 // 8. NEW PIE CHART WIDGET
 class _TexturePieChart extends StatelessWidget {
   final Map<String, double> composition;
-  _TexturePieChart({required this.composition});
+  const _TexturePieChart({required this.composition});
 
   final List<Color> pieColors = const [Colors.brown, Colors.orangeAccent, Colors.blueGrey];
 
