@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // For making API calls
 import 'dart:convert'; // For handling JSON data
 import 'package:image_picker/image_picker.dart'; // For picking videos
-// For File operations
+// Required for File operations
+import 'dart:typed_data'; // REQUIRED: For handling image data (Uint8List) - MUST BE AT TOP
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -12,6 +13,8 @@ class DashboardPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AgriDrone Dashboard'),
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -30,6 +33,16 @@ class DashboardPage extends StatelessWidget {
 
             // Card 3: Detect Soil from Video
             _SoilVideoCard(),
+
+            const SizedBox(height: 24), // Spacer
+
+            // Card 4: Detect Disease from Video
+            _DiseaseVideoCard(),
+
+            const SizedBox(height: 24), // Spacer
+
+            // Card 5: Crop Health Monitor
+            _CropHealthMonitorCard(), 
           ],
         ),
       ),
@@ -51,9 +64,7 @@ class _RainfallPredictionCardState extends State<_RainfallPredictionCard> {
 
   Future<void> _getPrediction(String temperature) async {
     if (temperature.isEmpty) {
-      setState(() {
-        _predictionResult = "Please enter a temperature.";
-      });
+      setState(() => _predictionResult = "Please enter a temperature.");
       return;
     }
 
@@ -63,7 +74,8 @@ class _RainfallPredictionCardState extends State<_RainfallPredictionCard> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.0.158:5000/predict'); // Your IP
+      // IMPORTANT: Check this IP matches your server!
+      final url = Uri.parse('http://192.168.0.217:5000/predict'); 
 
       final response = await http.post(
         url,
@@ -79,25 +91,13 @@ class _RainfallPredictionCardState extends State<_RainfallPredictionCard> {
               "Predicted Rainfall: ${data['predicted_rainfall']} mm";
         });
       } else {
-        setState(() {
-          _predictionResult = "Error from server: ${response.body}";
-        });
+        setState(() => _predictionResult = "Error from server: ${response.body}");
       }
     } catch (e) {
-      setState(() {
-        _predictionResult = "Error: Could not connect to the server.\n- Is the Python server running?\n- Is your phone on the same Wi-Fi?";
-      });
+      setState(() => _predictionResult = "Error: Could not connect to server.");
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _tempController.dispose();
-    super.dispose();
   }
 
   @override
@@ -110,48 +110,20 @@ class _RainfallPredictionCardState extends State<_RainfallPredictionCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Rainfall & Season Prediction",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text("Rainfall & Season Prediction", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
               controller: _tempController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Enter Current Temperature (°C)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.thermostat),
-              ),
+              decoration: const InputDecoration(labelText: 'Enter Temperature (°C)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.thermostat)),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               onPressed: _isLoading ? null : () => _getPrediction(_tempController.text),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                    )
-                  : const Text('Get Prediction'),
+              child: _isLoading ? const CircularProgressIndicator() : const Text('Get Prediction'),
             ),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _predictionResult,
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ),
+            Text(_predictionResult, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),
@@ -173,9 +145,7 @@ class _SoilSuggestionCardState extends State<_SoilSuggestionCard> {
 
   Future<void> _getSoilSuggestions(String soilType) async {
     if (soilType.isEmpty) {
-      setState(() {
-        _soilResult = "Please enter a soil type (e.g., Sandy soil, Red soil).";
-      });
+      setState(() => _soilResult = "Please enter a soil type.");
       return;
     }
 
@@ -185,7 +155,7 @@ class _SoilSuggestionCardState extends State<_SoilSuggestionCard> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.0.158:5000/soil_info'); // Your IP
+      final url = Uri.parse('http://192.168.0.217:5000/soil_info'); 
 
       final response = await http.post(
         url,
@@ -195,47 +165,21 @@ class _SoilSuggestionCardState extends State<_SoilSuggestionCard> {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-
         final String crops = (data['crop_suggestions'] as List).join(', ');
         final String fertilizers = (data['fertilizer_suggestions'] as List).join(', ');
 
         setState(() {
-          _soilResult = """
-Recommended Crops:
-$crops
-
-Recommended Fertilizers:
-$fertilizers
-
---- Average Soil Conditions ---
-Humidity: ${data['avg_humidity']}%
-Moisture: ${data['avg_moisture']}%
-Nitrogen: ${data['avg_nitrogen']} kg/ha
-Potassium: ${data['avg_potassium']} kg/ha
-Phosphorous: ${data['avg_phosphorous']} kg/ha
-""";
+          _soilResult = "Crops: $crops\n\nFertilizers: $fertilizers\n\nNitrogen: ${data['avg_nitrogen']} | Phosphorus: ${data['avg_phosphorous']}";
         });
       } else {
         final Map<String, dynamic> error = json.decode(response.body);
-        setState(() {
-          _soilResult = "Error: ${error['error']}";
-        });
+        setState(() => _soilResult = "Error: ${error['error']}");
       }
     } catch (e) {
-      setState(() {
-        _soilResult = "Error: Could not connect to the server.";
-      });
+      setState(() => _soilResult = "Error: Could not connect to server.");
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _soilController.dispose();
-    super.dispose();
   }
 
   @override
@@ -248,48 +192,19 @@ Phosphorous: ${data['avg_phosphorous']} kg/ha
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Soil & Crop Suggestions",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text("Soil & Crop Suggestions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
               controller: _soilController,
-              decoration: const InputDecoration(
-                labelText: 'Enter Soil Type',
-                hintText: 'e.g., Sandy soil, Red soil...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.grass),
-              ),
+              decoration: const InputDecoration(labelText: 'Enter Soil Type', border: OutlineInputBorder(), prefixIcon: Icon(Icons.grass)),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               onPressed: _isLoading ? null : () => _getSoilSuggestions(_soilController.text),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                    )
-                  : const Text('Get Suggestions'),
+              child: _isLoading ? const CircularProgressIndicator() : const Text('Get Suggestions'),
             ),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _soilResult,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
+            Text(_soilResult, style: const TextStyle(fontSize: 14)),
           ],
         ),
       ),
@@ -316,23 +231,16 @@ class _SoilVideoCardState extends State<_SoilVideoCard> {
       if (selectedVideo != null) {
         setState(() {
           _videoFile = selectedVideo;
-          _videoResult = "Video selected: ${selectedVideo.name.split('/').last}\n\nReady to analyze.";
+          _videoResult = "Video selected: ${selectedVideo.name.split('/').last}\nReady to analyze.";
         });
       }
     } catch (e) {
-      setState(() {
-        _videoResult = "Error picking video: $e";
-      });
+      setState(() => _videoResult = "Error picking video: $e");
     }
   }
 
   Future<void> _uploadAndDetect() async {
-    if (_videoFile == null) {
-      setState(() {
-        _videoResult = "Please select a video first.";
-      });
-      return;
-    }
+    if (_videoFile == null) return;
 
     setState(() {
       _isLoading = true;
@@ -340,58 +248,26 @@ class _SoilVideoCardState extends State<_SoilVideoCard> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.0.158:5000/detect_soil_video'); // Your IP
-
+      final url = Uri.parse('http://192.168.0.217:5000/detect_soil_video');
       var request = http.MultipartRequest('POST', url);
-      
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'video',
-          _videoFile!.path,
-        ),
-      );
+      request.files.add(await http.MultipartFile.fromPath('video', _videoFile!.path));
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-
         final String crops = (data['crop_suggestions'] as List).join(', ');
-        final String fertilizers = (data['fertilizer_suggestions'] as List).join(', ');
-
         setState(() {
-          _videoResult = """
-Detected Soil: ${data['soil_type']}
-
-Recommended Crops:
-$crops
-
-Recommended Fertilizers:
-$fertilizers
-
---- Average Soil Conditions ---
-Humidity: ${data['avg_humidity']}%
-Moisture: ${data['avg_moisture']}%
-Nitrogen: ${data['avg_nitrogen']} kg/ha
-Potassium: ${data['avg_potassium']} kg/ha
-Phosphorous: ${data['avg_phosphorous']} kg/ha
-""";
+          _videoResult = "Detected Soil: ${data['soil_type']}\n\nRecommended Crops: $crops";
         });
       } else {
-        final Map<String, dynamic> error = json.decode(response.body);
-        setState(() {
-          _videoResult = "Error: ${error['error']}";
-        });
+        setState(() => _videoResult = "Error: ${json.decode(response.body)['error']}");
       }
     } catch (e) {
-      setState(() {
-        _videoResult = "Error: Could not connect to the server. $e";
-      });
+      setState(() => _videoResult = "Error: Connection failed.");
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -405,47 +281,234 @@ Phosphorous: ${data['avg_phosphorous']} kg/ha
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Detect Soil from Video",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text("Detect Soil from Video", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            
             OutlinedButton.icon(
               icon: const Icon(Icons.video_library),
-              label: const Text("Select Video from Gallery"),
+              label: const Text("Select Video"),
               onPressed: _pickVideo,
             ),
             const SizedBox(height: 16),
-            
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               onPressed: (_isLoading || _videoFile == null) ? null : _uploadAndDetect,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                    )
-                  : const Text('Analyze Soil'),
+              child: _isLoading ? const CircularProgressIndicator() : const Text('Analyze Soil'),
             ),
             const SizedBox(height: 20),
+            Text(_videoResult, style: const TextStyle(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- WIDGET 4: DISEASE DETECTION CARD ---
+
+class _DiseaseVideoCard extends StatefulWidget {
+  @override
+  _DiseaseVideoCardState createState() => _DiseaseVideoCardState();
+}
+
+class _DiseaseVideoCardState extends State<_DiseaseVideoCard> {
+  bool _isLoading = false;
+  String _result = "Upload a leaf video to detect disease.";
+  XFile? _videoFile;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickVideo() async {
+    try {
+      final XFile? selected = await _picker.pickVideo(source: ImageSource.gallery);
+      if (selected != null) {
+        setState(() {
+          _videoFile = selected;
+          _result = "Selected: ${selected.name.split('/').last}\nReady to diagnose.";
+        });
+      }
+    } catch (e) {
+      setState(() => _result = "Error: $e");
+    }
+  }
+
+  Future<void> _analyze() async {
+    if (_videoFile == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _result = "Scanning for diseases...";
+    });
+
+    try {
+      final url = Uri.parse('http://192.168.0.217:5000/detect_disease_video'); 
+      var request = http.MultipartRequest('POST', url);
+      request.files.add(await http.MultipartFile.fromPath('video', _videoFile!.path));
+
+      var streamedResponse = await request.send();
+      var res = await http.Response.fromStream(streamedResponse);
+
+      if (res.statusCode == 200) {
+        var data = json.decode(res.body);
+        setState(() {
+          _result = "⚠️ DETECTED: ${data['detected_disease']}\n\nRx: ${data['recommendation']}";
+        });
+      } else {
+        setState(() => _result = "Error: ${res.body}");
+      }
+    } catch (e) {
+      setState(() => _result = "Connection Error. Check IP/Server.");
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.red.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Text("Crop Disease Doctor", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.video_camera_back, color: Colors.red), 
+              label: const Text("Select Leaf Video", style: TextStyle(color: Colors.red)), 
+              onPressed: _pickVideo
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              onPressed: (_isLoading || _videoFile == null) ? null : _analyze,
+              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Diagnose Disease"),
+            ),
+            const SizedBox(height: 16),
+            Text(_result, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- WIDGET 5: CROP HEALTH MONITOR (PAR + NDVI) ---
+
+class _CropHealthMonitorCard extends StatefulWidget {
+  @override
+  _CropHealthMonitorCardState createState() => _CropHealthMonitorCardState();
+}
+
+class _CropHealthMonitorCardState extends State<_CropHealthMonitorCard> {
+  bool _isLoading = false;
+  String _resultText = "Enter PAR value & Upload NDVI Video.";
+  XFile? _videoFile;
+  final TextEditingController _parController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  
+  // This variable requires dart:typed_data (now correctly imported at the top)
+  Uint8List? _resultImageBytes; 
+
+  Future<void> _pickVideo() async {
+    final XFile? selected = await _picker.pickVideo(source: ImageSource.gallery);
+    if (selected != null) {
+      setState(() {
+        _videoFile = selected;
+        _resultText = "Video Selected: ${selected.name.split('/').last}\nNow click Analyze.";
+      });
+    }
+  }
+
+  Future<void> _analyzeHealth() async {
+    if (_videoFile == null || _parController.text.isEmpty) {
+      setState(() => _resultText = "Please enter PAR value and select a video.");
+      return;
+    }
+
+    setState(() { _isLoading = true; _resultText = "Processing Rules..."; _resultImageBytes = null; });
+
+    try {
+      final url = Uri.parse('http://192.168.0.217:5000/analyze_crop_health'); // CHECK IP
+      var request = http.MultipartRequest('POST', url);
+      
+      request.files.add(await http.MultipartFile.fromPath('video', _videoFile!.path));
+      request.fields['par_value'] = _parController.text;
+
+      var streamedResponse = await request.send();
+      var res = await http.Response.fromStream(streamedResponse);
+
+      if (res.statusCode == 200) {
+        var data = json.decode(res.body);
+        
+        String base64Image = data['health_map'];
+        Uint8List bytes = base64Decode(base64Image);
+
+        setState(() {
+          _resultImageBytes = bytes;
+          _resultText = """
+Diagnosis: ${data['diagnosis']}
+PAR Condition: ${data['par_status']}
+Reliability: ${data['reliability']}
+""";
+        });
+      } else {
+        setState(() => _resultText = "Error: ${res.body}");
+      }
+    } catch (e) {
+      setState(() => _resultText = "Connection Error: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text("NDVI & PAR Health Monitor", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
+            const SizedBox(height: 16),
             
-            Container(
-              padding: const EdgeInsets.all(12),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _videoResult,
-                style: const TextStyle(fontSize: 14),
+            TextField(
+              controller: _parController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Current PAR Value (µmol)",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.wb_sunny),
               ),
             ),
+            const SizedBox(height: 12),
+            
+            OutlinedButton.icon(
+              icon: const Icon(Icons.video_file, color: Colors.blue),
+              label: const Text("Select NDVI/Field Video", style: TextStyle(color: Colors.blue)),
+              onPressed: _pickVideo
+            ),
+            const SizedBox(height: 12),
+            
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+              onPressed: (_isLoading) ? null : _analyzeHealth,
+              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Analyze Crop Health"),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            if (_resultImageBytes != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(_resultImageBytes!, height: 200, fit: BoxFit.cover),
+              ),
+              
+            const SizedBox(height: 12),
+            Text(_resultText, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
