@@ -232,7 +232,7 @@ class _MapPageState extends State<MapPage> {
                           )),
                           Switch(
                             value: isHealthView,
-                            activeColor: Colors.green,
+                            activeThumbColor: Colors.green,
                             inactiveThumbColor: Colors.brown,
                             inactiveTrackColor: Colors.brown.shade100,
                             onChanged: (val) {
