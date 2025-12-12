@@ -44,7 +44,7 @@ dependencies:
   latlong2: ^0.9.1          # Helper for latitude/longitude points
 
   # For graphing/charting
-  fl_chart: ^0.68.0
+  fl_chart: ^0.66.0
   
   # For picking files (CSV)
   file_picker: ^10.3.3
