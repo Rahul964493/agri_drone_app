@@ -321,7 +321,6 @@ class _MapPageState extends State<MapPage> {
                               if (!hasHealth) _buildNoDataMessage("Crop Health Analysis not performed.")
                               else ...[
                                  // --- HEALTH DASHBOARD ---
-                                 // Row 1: Stress Gauge & Stats
                                  Row(
                                    crossAxisAlignment: CrossAxisAlignment.start,
                                    children: [
@@ -352,7 +351,6 @@ class _MapPageState extends State<MapPage> {
                                  ),
                                  const SizedBox(height: 20),
                                  
-                                 // Row 2: PAR Meter
                                  _buildSectionContainer(child: Column(
                                    crossAxisAlignment: CrossAxisAlignment.start,
                                    children: [
@@ -365,7 +363,6 @@ class _MapPageState extends State<MapPage> {
                                  )),
                                  const SizedBox(height: 20),
 
-                                 // Row 3: Disease & Recs
                                  _buildSectionContainer(child: Column(
                                    crossAxisAlignment: CrossAxisAlignment.start,
                                    children: [
@@ -402,7 +399,6 @@ class _MapPageState extends State<MapPage> {
                                  )),
                                  const SizedBox(height: 20),
                                  
-                                 // Row 2: Composition Gauges
                                  Row(
                                    children: [
                                      Expanded(child: _buildMiniGauge("Moisture", soilData['raw_moisture'] ?? 0.0, Colors.lightBlueAccent, Icons.water_drop)),
@@ -412,7 +408,6 @@ class _MapPageState extends State<MapPage> {
                                  ),
                                  const SizedBox(height: 20),
                                  
-                                 // Row 3: Type & Recommendations
                                  _buildSectionContainer(child: Column(
                                    crossAxisAlignment: CrossAxisAlignment.start,
                                    children: [
@@ -767,9 +762,10 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true, // Added this to make map visible behind AppBar
       backgroundColor: _darkBg,
       appBar: AppBar(
-        backgroundColor: _darkBg,
+        backgroundColor: Colors.black.withOpacity(0.5), // Changed to 50% transparent black
         elevation: 0,
         title: const Text('Field Manager', style: TextStyle(color: Colors.white)),
         actions: [
